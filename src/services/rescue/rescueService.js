@@ -255,8 +255,8 @@ exports.createRescueRequest = async (sessionData, requesterUser) => {
           const notification = await Notification.create({
             recipient_id: volunteer.user_id._id,
             recipient_role: 'Volunteer',
-            title: 'Yêu cầu cứu hộ khẩn cấp gần bạn',
-            body: `Yêu cầu mới: "${emergencyTypeLabel}". Cách bạn ${Math.round(distance)}m. SĐT: ${sessionData.sender_phone}`,
+            title: 'Urgent rescue request nearby',
+            body: `New request: "${emergencyTypeLabel}". ${Math.round(distance)}m away. Tel: ${sessionData.sender_phone}`,
             type: 'Emergency_SOS_Nearby',
             reference_id: savedSession._id,
             reference_type: 'rescue_sessions',

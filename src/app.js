@@ -51,8 +51,7 @@ const corsOptions = {
       'http://127.0.0.1:5000',
       'http://192.168.1.37:3000',
       'http://192.168.1.37:4000',
-      'http://192.168.1.37:5000',
-      'https://floodsense-blue.vercel.app'
+      'http://192.168.1.37:5000'
     ];
     const isLocalhost = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
     if (allowedOrigins.includes(origin) || isLocalhost) {
