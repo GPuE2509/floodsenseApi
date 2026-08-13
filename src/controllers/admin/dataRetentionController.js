@@ -63,7 +63,7 @@ exports.runEmergencyCleanUp = async (req, res) => {
     if (logResult.total_records_processed === 0) {
       return res.status(200).json({
         success: true,
-        message: 'ℹ️ Chưa có bất kỳ loại dữ liệu nào vượt quá số ngày tuổi thọ định mức. Không có file lưu trữ lạnh nào được xuất ra.',
+        message: 'ℹ️ No data has exceeded the retention policy duration yet. No cold archive files were exported.',
         logResult
       });
     }
@@ -117,6 +117,18 @@ exports.downloadArchiveFile = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: 'Archive file not found or invalid filename.'
+      });
+    }
+
+    const zlib = require('zlib');
+    const gzippedBuffer = fs.readFileSync(filepath);
+    const jsonString = zlib.gunzipSync(gzippedBuffer).toString('utf8');
+    const archiveData = JSON.parse(jsonString);
+    const records = Array.isArray(archiveData.records) ? archiveData.records : [];
+    if (records.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No records found in this archive batch. Export aborted.'
       });
     }
 

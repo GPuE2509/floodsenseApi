@@ -111,7 +111,7 @@ exports.addContact = async (req, res) => {
       full_name: targetUser.full_name,
       email: targetUser.email,
       phone: targetUser.phone || '',
-      label: label && label.trim() ? label.trim() : 'Gia đình',
+      label: label && label.trim() ? label.trim() : 'Family',
       added_at: new Date()
     });
 

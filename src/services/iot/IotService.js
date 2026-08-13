@@ -61,9 +61,9 @@ class IotService {
 
       let speedCmPerMin = 0;
       if (recentLogs.length > 0) {
-        const oldestInWindow = recentLogs[recentLogs.length - 1];
-        const diffMin = Math.max(0.1, (now.getTime() - new Date(oldestInWindow.timestamp).getTime()) / 60000);
-        const diffCm = waterLevel - ((oldestInWindow.water_level_mm || 0) / 10);
+        const lastLog = recentLogs[0];
+        const diffMin = Math.max(0.1, (now.getTime() - new Date(lastLog.timestamp).getTime()) / 60000);
+        const diffCm = waterLevel - ((lastLog.water_level_mm || 0) / 10);
         speedCmPerMin = parseFloat((diffCm / diffMin).toFixed(2));
       } else if (device.last_reading_time) {
         const diffMin = Math.max(0.1, (now.getTime() - new Date(device.last_reading_time).getTime()) / 60000);
@@ -107,14 +107,14 @@ class IotService {
           const existingSpeedAlert = await Notification.findOne({
             reference_id: device._id,
             type: 'System_Alert',
-            title: { $regex: 'Tốc độ nước dâng cao' },
+            title: { $regex: 'Rapid water rising speed' },
             created_at: { $gte: thirtyMinsAgo }
           }).exec();
 
           if (!existingSpeedAlert) {
             const rolesToNotify = ['Admin', 'Manager', 'User', 'Volunteer', 'Workshop'];
-            const title = `🚨 Cảnh báo: Tốc độ nước dâng cao tại trạm ${device.name}`;
-            const body = `Tốc độ nước dâng hiện tại đạt ${speedCmPerMin} cm/min (Ngưỡng cảnh báo: ${speedThreshold} cm/min). Trạm vừa đo mức nước ${waterLevel} cm.`;
+            const title = `🚨 Alert: Rapid water rising speed at station ${device.name}`;
+            const body = `Current water rising speed reached ${speedCmPerMin} cm/min (Threshold: ${speedThreshold} cm/min). Station water level is ${waterLevel} cm.`;
 
             for (const role of rolesToNotify) {
               const notif = await Notification.create({
@@ -234,8 +234,8 @@ class IotService {
           await warningRoadService.checkAndNotifyWarningRoads(
             device.lat,
             device.lng,
-            'Thiết bị IoT',
-            `Ngập lụt tại trạm ${device.name}: ${device.current_water_level}cm (${device.warning_water_status})`
+            'IoT Device',
+            `Flood detected at station ${device.name}: ${device.current_water_level}cm (${device.warning_water_status})`
           );
         } catch (roadErr) {
           console.error('Failed to trigger warning road alerts from IoT:', roadErr);
@@ -243,8 +243,8 @@ class IotService {
 
         const { checkAndTriggerWarningZoneAlerts } = require('../../utils/warningZoneHelper');
         checkAndTriggerWarningZoneAlerts(device.lat, device.lng, {
-          title: `Cảnh báo ngập lụt tại trạm ${device.name}`,
-          body: `Trạm đo ${device.name} ghi nhận mức nước đạt ${device.current_water_level}cm (${device.warning_water_status})`,
+          title: `IoT Flood Alert: ${device.name}`,
+          body: `Station ${device.name} recorded water level of ${device.current_water_level}cm (${device.warning_water_status})`,
           type: 'Flood_In_Warning_Zone',
           reference_id: device._id,
           reference_type: 'incident_reports',
@@ -312,11 +312,22 @@ class IotService {
 
       const formatDate = (dt) => {
         const d = new Date(dt);
-        const day = d.getDate().toString().padStart(2, '0');
-        const m = (d.getMonth() + 1).toString().padStart(2, '0');
-        const y = d.getFullYear();
-        const hh = d.getHours().toString().padStart(2, '0');
-        const mm = d.getMinutes().toString().padStart(2, '0');
+        const options = {
+          timeZone: 'Asia/Ho_Chi_Minh',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        };
+        const formatter = new Intl.DateTimeFormat('en-GB', options);
+        const parts = formatter.formatToParts(d);
+        const day = parts.find(p => p.type === 'day').value;
+        const m = parts.find(p => p.type === 'month').value;
+        const y = parts.find(p => p.type === 'year').value;
+        const hh = parts.find(p => p.type === 'hour').value;
+        const mm = parts.find(p => p.type === 'minute').value;
         return `${hh}:${mm} ${day}/${m}/${y}`;
       };
 
@@ -396,12 +407,24 @@ class IotService {
 
       const formatDate = (dt) => {
         const d = new Date(dt);
-        const day = d.getDate().toString().padStart(2, '0');
-        const m = (d.getMonth() + 1).toString().padStart(2, '0');
-        const y = d.getFullYear();
-        const hh = d.getHours().toString().padStart(2, '0');
-        const mm = d.getMinutes().toString().padStart(2, '0');
-        const ss = d.getSeconds().toString().padStart(2, '0');
+        const options = {
+          timeZone: 'Asia/Ho_Chi_Minh',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false
+        };
+        const formatter = new Intl.DateTimeFormat('en-GB', options);
+        const parts = formatter.formatToParts(d);
+        const day = parts.find(p => p.type === 'day').value;
+        const m = parts.find(p => p.type === 'month').value;
+        const y = parts.find(p => p.type === 'year').value;
+        const hh = parts.find(p => p.type === 'hour').value;
+        const mm = parts.find(p => p.type === 'minute').value;
+        const ss = parts.find(p => p.type === 'second').value;
         return `${hh}:${mm}:${ss} ${day}/${m}/${y}`;
       };
 
@@ -412,8 +435,7 @@ class IotService {
         let speed = parseFloat(((log.rising_speed_mm_per_min || 0) / 10).toFixed(2));
 
         if (i > 0) {
-          const windowStartIdx = Math.max(0, i - 14);
-          const startLog = logs[windowStartIdx];
+          const startLog = logs[i - 1];
           const diffMin = (new Date(log.timestamp).getTime() - new Date(startLog.timestamp).getTime()) / 60000;
           if (diffMin >= 0.1) {
             const diffCm = waterCm - ((startLog.water_level_mm || 0) / 10);

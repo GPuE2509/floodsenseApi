@@ -670,7 +670,7 @@ exports.getFloodZoneHeatmap = async () => {
 
       zones.push({
         id: `heatmap-dev-${dev._id}`,
-        name: `Cụm trạm ${dev.name || dev.device_code || 'IoT Zone'}`,
+        name: `Station cluster ${dev.name || dev.device_code || 'IoT Zone'}`,
         lat: dev.lat,
         lng: dev.lng,
         radius_m: localizedRadius,
@@ -678,7 +678,7 @@ exports.getFloodZoneHeatmap = async () => {
         severity: severity,
         historical_incidents: histCount,
         realtime_level_cm: level,
-        description: `Mật độ ngập tích lũy thời gian thực và lịch sử tại cụm ${dev.location || 'trung tâm'}.`
+        description: `Real-time and historical cumulative flood density at cluster ${dev.location || 'center'}.`
       });
     }
   }

@@ -134,7 +134,7 @@ exports.getUserGrowthMetrics = async ({ range = '30days' }) => {
     { $sort: { count: -1 } }
   ]);
   const districtDistribution = districtDistributionRaw.map(d => ({
-    district: d._id || 'Chưa cập nhật',
+    district: d._id || 'Not updated',
     count: d.count
   }));
 

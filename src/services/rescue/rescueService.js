@@ -78,6 +78,16 @@ async function getStaffOnDuty(workshopId) {
 exports.createRescueRequest = async (sessionData, requesterUser) => {
   const selectedServices = sessionData.selected_services || [];
 
+  if (sessionData.workshop_id) {
+    const Workshop = require('../../models/Workshop');
+    const ownWorkshop = await Workshop.findOne({ owner_id: requesterUser._id });
+    if (ownWorkshop && ownWorkshop._id.toString() === sessionData.workshop_id.toString()) {
+      const err = new Error('You cannot request rescue services from your own workshop.');
+      err.statusCode = 400;
+      throw err;
+    }
+  }
+
   // Cancel any existing unassigned Pending sessions for this requester so duplicate clicks don't stack
   await RescueSession.updateMany(
     { requester_id: sessionData.requester_id, status: 'Pending' },
@@ -181,6 +191,15 @@ exports.createRescueRequest = async (sessionData, requesterUser) => {
     const notifiedStaff = [];
     for (const recipientId of recipients) {
       try {
+        const isAvailableStaff = await WorkshopStaff.findOne({
+          workshop_id: sessionData.workshop_id,
+          user_id: recipientId,
+          status: { $in: ['Available', 'Busy'] }
+        }).lean();
+        if (!isAvailableStaff) {
+          continue;
+        }
+
         await Notification.create({
           recipient_id: recipientId,
           recipient_role: 'Workshop',
@@ -240,6 +259,9 @@ exports.createRescueRequest = async (sessionData, requesterUser) => {
 
   // 3. Filter nearby volunteers and notify them
   for (const volunteer of activeVolunteers) {
+    if (volunteer.user_id && volunteer.user_id._id.toString() === requesterUser._id.toString()) {
+      continue;
+    }
     if (volunteer.current_lat != null && volunteer.current_lng != null) {
       const distance = haversineDistance(
         parseFloat(sessionData.initial_lat),
@@ -308,7 +330,7 @@ exports.getActiveRescueRequestsForVolunteer = async (volunteerUserId, options = 
 
   const query = {
     $or: [
-      { status: 'Pending' }
+      { status: 'Pending', requester_id: { $ne: volunteerUserId } }
     ]
   };
 
@@ -457,7 +479,7 @@ exports.acceptRescueRequest = async (rescueSessionId, volunteerUserId) => {
   });
 
   if (activeSession) {
-    const err = new Error('Bạn đang có một chuyến cứu hộ chưa hoàn thành. Vui lòng hoàn thành chuyến cứu hộ hiện tại trước khi nhận chuyến mới.');
+    const err = new Error('You have an uncompleted rescue mission. Please complete your current mission before accepting a new one.');
     err.status = 400;
     throw err;
   }
@@ -470,7 +492,7 @@ exports.acceptRescueRequest = async (rescueSessionId, volunteerUserId) => {
   }
 
   if (rescueSession.status !== 'Pending') {
-    const err = new Error('Yêu cầu cứu hộ này đã được tiếp nhận bởi tình nguyện viên khác.');
+    const err = new Error('This rescue request has already been accepted by another volunteer.');
     err.status = 400;
     throw err;
   }

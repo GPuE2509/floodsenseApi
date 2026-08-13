@@ -38,7 +38,7 @@ exports.checkAndTriggerWarningZoneAlerts = async (eventLat, eventLng, eventDetai
           const notification = new Notification({
             recipient_id: zone.user_id,
             title: eventDetails.title,
-            body: eventDetails.body || `Phát hiện ngập lụt trong vùng cảnh báo "${zone.zone_name}" của bạn.`,
+            body: eventDetails.body || `Flood detected in your warning zone "${zone.zone_name}".`,
             type: eventDetails.type || 'Flood_In_Warning_Zone',
             reference_id: eventDetails.reference_id,
             reference_type: eventDetails.reference_type,

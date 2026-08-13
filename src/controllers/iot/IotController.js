@@ -244,7 +244,7 @@ class IotController {
         let status = 'info';
         if (log.type === 'System_Alert' || log.type === 'Flood_In_Warning_Zone') {
           if (log.title.includes('Critical') || log.title.includes('Depleted') || log.title.includes('vượt ngưỡng')) status = 'error';
-          else if (log.title.includes('Severe') || log.title.includes('Low Battery') || log.title.includes('cảnh báo')) status = 'warning';
+          else if (log.title.includes('Severe') || log.title.includes('Low Battery') || log.title.includes('cảnh báo') || log.title.includes('Alert')) status = 'warning';
         }
         return {
           time: new Date(log.created_at).toLocaleString('vi-VN'),

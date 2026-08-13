@@ -95,8 +95,8 @@ exports.checkAndNotifyWarningRoads = async (lat, lng, eventSource, eventDetail) 
     if (matchingRoads.length === 0) return;
 
     for (const road of matchingRoads) {
-      const title = `🚨 Cảnh báo tuyến đường: ${road.road_name}`;
-      const body = `Phát hiện sự cố gần tuyến đường quan tâm của bạn: ${eventDetail} (${eventSource}).`;
+      const title = `🚨 Road Warning: ${road.road_name}`;
+      const body = `Incident detected near your tracked road: ${eventDetail} (${eventSource}).`;
 
       const notif = await Notification.create({
         recipient_id: road.user_id,
@@ -105,7 +105,7 @@ exports.checkAndNotifyWarningRoads = async (lat, lng, eventSource, eventDetail) 
         body,
         type: 'System_Alert',
         metadata: {
-          sender_name: 'Hệ thống cảnh báo',
+          sender_name: 'Warning System',
           web_url: '/sos',
           lat,
           lng,

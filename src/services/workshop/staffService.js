@@ -3,6 +3,7 @@ const WorkshopStaff = require('../../models/WorkshopStaff');
 const User = require('../../models/User');
 const Notification = require('../../models/Notification');
 const ShiftAssignment = require('../../models/ShiftAssignment');
+const RescueSession = require('../../models/RescueSession');
 
 exports.inviteStaff = async (ownerId, { phone_or_email }) => {
   // Find the owner's workshop
@@ -82,7 +83,7 @@ exports.inviteStaff = async (ownerId, { phone_or_email }) => {
       metadata: {
         sender_name: senderName,
         workshop_name: workshop.name,
-        web_url: '/notifications'
+        web_url: '/invitations'
       }
     });
   } catch (err) {
@@ -182,13 +183,15 @@ exports.getWorkshopStaff = async (userId) => {
 
   const onDutyStaffUserIds = await getCurrentOnDutyUserIds(userStaffLink.workshop_id);
 
-  const mappedStaff = staff.map(s => {
+  const mappedStaff = await Promise.all(staff.map(async (s) => {
     const uidStr = s.user_id?._id?.toString() || s.user_id?.toString();
+    const tasksCount = await RescueSession.countDocuments({ assigned_staff_id: s._id });
     return {
       ...s,
-      isOnDuty: onDutyStaffUserIds.includes(uidStr)
+      isOnDuty: onDutyStaffUserIds.includes(uidStr),
+      tasksCount: tasksCount
     };
-  });
+  }));
   
   return { staff: mappedStaff, isOwner: userStaffLink.is_owner };
 };

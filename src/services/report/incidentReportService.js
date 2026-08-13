@@ -116,13 +116,13 @@ exports.createReport = async (data) => {
   const savedReport = await newReport.save();
 
   checkAndTriggerWarningZoneAlerts(savedReport.lat, savedReport.lng, {
-    title: `Cảnh báo ngập lụt từ cộng đồng: ${savedReport.title}`,
-    body: savedReport.description || `Có báo cáo ngập lụt tại khu vực lân cận.`,
+    title: `Community Flood Warning: ${savedReport.title}`,
+    body: savedReport.description || `Flood report submitted in nearby area.`,
     type: 'Flood_In_Warning_Zone',
     reference_id: savedReport._id,
     reference_type: 'incident_reports',
     metadata: {
-      sender_name: 'Cộng đồng',
+      sender_name: 'Community',
       web_url: `/reports`,
     }
   }).catch(err => console.error('Error triggering warning zone alerts from user report:', err));
@@ -256,6 +256,9 @@ exports.voteReport = async (id, voteData) => {
   if (lat != null && lng != null && report.lat != null && report.lng != null) {
     distance_m = Math.round(haversineDistance(parseFloat(lat), parseFloat(lng), report.lat, report.lng));
   }
+
+  // Clean up any invalid legacy guest voters to prevent validation errors
+  report.voters = report.voters.filter(v => v.user_id && mongoose.Types.ObjectId.isValid(v.user_id));
 
   const userObjectId = mongoose.Types.ObjectId.isValid(user_id) ? new mongoose.Types.ObjectId(user_id) : null;
   const existingVoteIndex = report.voters.findIndex(v => v.user_id?.toString() === user_id.toString());
@@ -423,9 +426,13 @@ exports.updateReportStatus = async (id, { status, severity }, operatorUser) => {
         }
 
         if (pointDelta !== 0) {
-          await User.findByIdAndUpdate(report.reporter_id, {
-            $inc: { contribution_points: pointDelta, weekly_points: pointDelta, monthly_points: pointDelta }
-          });
+          const userObj = await User.findById(report.reporter_id);
+          if (userObj) {
+            userObj.contribution_points = Math.max(0, (userObj.contribution_points || 0) + pointDelta);
+            userObj.weekly_points = Math.max(0, (userObj.weekly_points || 0) + pointDelta);
+            userObj.monthly_points = Math.max(0, (userObj.monthly_points || 0) + pointDelta);
+            await userObj.save();
+          }
         }
       } catch (err) {
         console.error('Failed to update reporter points:', err);
