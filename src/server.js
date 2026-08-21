@@ -32,7 +32,7 @@ wss.on('connection', (ws) => {
         ws.userName = data.userName;
         ws.role = data.role;
         ws.avatarUrl = data.avatarUrl || '';
-        wsHelper.clients.set(data.userId, ws);
+        wsHelper.addClient(data.userId, ws);
         console.log(`Registered WebSocket user: ${data.userName} (${data.userId})`);
       } else if (data.type === 'chat') {
         const { senderId, senderName, senderRole, targetId, text, time, members } = data;
@@ -75,36 +75,37 @@ wss.on('connection', (ws) => {
             }
           }
 
-          wsHelper.clients.forEach((client, clientUserId) => {
+          wsHelper.clients.forEach((sockets, clientUserId) => {
             const isMember = !groupMembers || groupMembers.includes(clientUserId);
-            if (isMember && clientUserId !== senderId && client.readyState === WebSocket.OPEN) {
-              client.send(JSON.stringify({
-                type: 'chat',
-                senderId,
-                senderName,
-                senderRole,
-                senderAvatarUrl: ws.avatarUrl || '',
-                groupId: targetId,
-                text,
-                time
-              }));
+            if (isMember && clientUserId !== senderId) {
+              sockets.forEach(client => {
+                if (client.readyState === WebSocket.OPEN) {
+                  client.send(JSON.stringify({
+                    type: 'chat',
+                    senderId,
+                    senderName,
+                    senderRole,
+                    senderAvatarUrl: ws.avatarUrl || '',
+                    groupId: targetId,
+                    text,
+                    time
+                  }));
+                }
+              });
             }
           });
         } else {
           // Handle Direct Message
           console.log(`Direct message from ${senderName} to ${targetId}: ${text}`);
-          const recipientSocket = wsHelper.clients.get(targetId);
-          if (recipientSocket && recipientSocket.readyState === WebSocket.OPEN) {
-            recipientSocket.send(JSON.stringify({
-              type: 'chat',
-              senderId,
-              senderName,
-              senderRole,
-              senderAvatarUrl: ws.avatarUrl || '',
-              text,
-              time
-            }));
-          }
+          wsHelper.sendToUser(targetId, {
+            type: 'chat',
+            senderId,
+            senderName,
+            senderRole,
+            senderAvatarUrl: ws.avatarUrl || '',
+            text,
+            time
+          });
         }
       }
     } catch (err) {
@@ -114,7 +115,7 @@ wss.on('connection', (ws) => {
 
   ws.on('close', () => {
     if (ws.userId) {
-      wsHelper.clients.delete(ws.userId);
+      wsHelper.removeClient(ws.userId, ws);
       console.log(`Removed WebSocket client registration: ${ws.userName} (${ws.userId})`);
     }
   });
