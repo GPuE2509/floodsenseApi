@@ -138,7 +138,7 @@ exports.getConversations = async (req, res) => {
           id: threadId,
           isGroup,
           lastMsg: msg.message_text,
-          time: new Date(msg.sent_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+          time: new Date(msg.sent_at).toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit' }),
           timestamp: msg.sent_at
         });
       }
@@ -265,7 +265,7 @@ exports.getChatHistory = async (req, res) => {
         senderRole: msg.sender_id.role || 'Member',
         senderAvatarUrl: msg.sender_id.avatar_url || '',
         text: msg.message_text,
-        time: new Date(msg.sent_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+        time: new Date(msg.sent_at).toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit' })
       };
     });
 
@@ -356,7 +356,7 @@ exports.sendMessage = async (req, res) => {
         senderRole: savedMsg.sender_id.role || 'Member',
         senderAvatarUrl: savedMsg.sender_id.avatar_url || '',
         text: savedMsg.message_text,
-        time: new Date(savedMsg.sent_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+        time: new Date(savedMsg.sent_at).toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit' })
       }
     });
   } catch (error) {
