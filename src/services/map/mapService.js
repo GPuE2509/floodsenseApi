@@ -518,7 +518,9 @@ exports.calculateAlternativeRoutes = async (startLat, startLng, endLat, endLng, 
 
   // Fetch active hazard points
   const activeHazards = await IncidentReport.find({
-    moderation_status: 'Approved'
+    moderation_status: 'Approved',
+    lifecycle_status: 'Active',
+    expiredAt: { $gt: new Date() }
   }).lean();
 
   // Filter hazards where confirm votes >= deny votes
