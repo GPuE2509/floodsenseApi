@@ -828,7 +828,9 @@ const GOONG_SEARCH_QUERIES = [
 
 const OVERPASS_SERVERS = [
   'https://overpass-api.de/api/interpreter',
-  'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
+    'https://overpass.nchc.org.tw/api/interpreter',
+  'https://lz4.overpass-api.de/api/interpreter',
+  'https://z.overpass-api.de/api/interpreter',
   'https://overpass.kumi.systems/api/interpreter'
 ];
 
