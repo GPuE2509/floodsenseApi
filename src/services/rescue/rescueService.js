@@ -262,7 +262,9 @@ exports.createRescueRequest = async (sessionData, requesterUser) => {
     if (!volunteer.user_id) {
       continue;
     }
-    if (volunteer.user_id._id.toString() === requesterUser._id.toString()) {
+    const volunteerUserIdStr = volunteer.user_id._id ? volunteer.user_id._id.toString() : volunteer.user_id.toString();
+    const requesterUserIdStr = requesterUser._id ? requesterUser._id.toString() : requesterUser.toString();
+    if (volunteerUserIdStr === requesterUserIdStr) {
       continue;
     }
     if (volunteer.current_lat != null && volunteer.current_lng != null) {
@@ -491,6 +493,12 @@ exports.acceptRescueRequest = async (rescueSessionId, volunteerUserId) => {
   if (!rescueSession) {
     const err = new Error('Rescue session not found.');
     err.status = 404;
+    throw err;
+  }
+
+  if (rescueSession.requester_id.toString() === volunteer.user_id._id.toString()) {
+    const err = new Error('You cannot accept your own rescue request.');
+    err.status = 400;
     throw err;
   }
 
