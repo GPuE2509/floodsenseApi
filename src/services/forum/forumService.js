@@ -47,7 +47,8 @@ exports.createPost = async (user, data, options = {}) => {
     category: category || options.defaultCategory || 'Experience',
     images: uploadedUrls,
     status: options.status || 'pending',
-    is_pinned: options.is_pinned || false
+    is_pinned: options.is_pinned || false,
+    is_official: options.is_official || false,
   });
 
   const savedPost = await newPost.save();

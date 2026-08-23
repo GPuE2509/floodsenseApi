@@ -35,7 +35,8 @@ exports.createOfficialPinnedPost = async (req, res) => {
     const savedPost = await forumService.createPost(req.user, req.body, {
       defaultCategory: 'Announcement',
       status: 'approved',
-      is_pinned: true
+      is_pinned: true,
+      is_official: true
     });
     wsHelper.broadcast({ type: 'FORUM_UPDATE' });
     res.status(201).json({ success: true, data: savedPost });

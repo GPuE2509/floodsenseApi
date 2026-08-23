@@ -133,8 +133,36 @@ exports.cancelWorkshopRegistration = async (userId) => {
   targetStaffLink.status = 'Inactive';
   await targetStaffLink.save();
 
-  // Revoke Workshop role from User, resetting back to User
-  await User.findByIdAndUpdate(userId, { role: 'User' });
+  // Revoke Workshop role from Owner, resetting back to User if they don't have other active workshop link
+  const ownerActiveCount = await WorkshopStaff.countDocuments({
+    user_id: userId,
+    status: { $in: ['Available', 'Busy', 'Suspended'] },
+    _id: { $ne: targetStaffLink._id }
+  });
+  if (ownerActiveCount === 0) {
+    await User.findByIdAndUpdate(userId, { role: 'User' });
+  }
+
+  // Deactivate all other staff links and revoke their role if they don't have other active workshop links
+  const otherStaffMembers = await WorkshopStaff.find({
+    workshop_id: targetWorkshop._id,
+    is_owner: false
+  });
+
+  for (const staff of otherStaffMembers) {
+    staff.status = 'Inactive';
+    await staff.save();
+
+    const otherActiveCount = await WorkshopStaff.countDocuments({
+      user_id: staff.user_id,
+      status: { $in: ['Available', 'Busy', 'Suspended'] },
+      _id: { $ne: staff._id }
+    });
+
+    if (otherActiveCount === 0) {
+      await User.findByIdAndUpdate(staff.user_id, { role: 'User' });
+    }
+  }
 };
 
 exports.toggleWorkshopStatus = async (userId, { action }) => {

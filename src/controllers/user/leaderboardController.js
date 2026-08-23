@@ -89,8 +89,19 @@ exports.getLeaderboard = async (req, res) => {
       if (user.role === 'User') {
         info = user.district || '';
       } else if (user.role === 'Volunteer') {
-        if (user.vehicle_type && user.vehicle_plate) {
-          info = `${user.vehicle_type} - ${user.vehicle_plate}`;
+        const vehicleMap = {
+          'Canoe': 'Canoe / Boat',
+          'Boat': 'Canoe / Boat',
+          'Pickup_Truck': 'Pickup Truck',
+          'Pickup': 'Pickup Truck',
+          'Wading_Motorcycle': 'Amphibious Motorbike',
+          'Other': 'Other vehicles'
+        };
+        const vehicleLabel = vehicleMap[user.vehicle_type] || (user.vehicle_type ? user.vehicle_type.replace(/_/g, ' ') : '');
+        if (vehicleLabel && user.vehicle_plate) {
+          info = `${vehicleLabel} - ${user.vehicle_plate}`;
+        } else if (vehicleLabel) {
+          info = vehicleLabel;
         } else {
           info = user.district || 'Unknown vehicle';
         }

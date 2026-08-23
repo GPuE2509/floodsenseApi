@@ -53,8 +53,14 @@ router.get('/me/staff', authenticateUser, staffController.getWorkshopStaff);
 // Owner invites a user to the workshop
 router.post('/me/staff/invite', authenticateUser, staffController.inviteStaff);
 
+// Owner cancels an invitation
+router.delete('/me/staff/:userId/invite', authenticateUser, staffController.cancelInvitation);
+
 // Owner suspends/unsuspends a staff member
 router.put('/me/staff/:userId/suspend', authenticateUser, staffController.toggleSuspendStaff);
+
+// Owner fires/removes a staff member from the workshop
+router.delete('/me/staff/:userId', authenticateUser, staffController.fireStaff);
 
 // Update staff real-time location
 router.put('/me/staff/location', authenticateUser, staffController.updateStaffLocation);

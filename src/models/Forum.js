@@ -26,6 +26,7 @@ const forumPostSchema = new Schema({
     default: 'pending'
   },
   is_pinned: { type: Boolean, default: false },
+  is_official: { type: Boolean, default: false },
   pinned_at: { type: Date },
   is_violating: { type: Boolean, default: false },
   likes: [{ type: Schema.Types.ObjectId, ref: 'User' }],

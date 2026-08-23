@@ -148,3 +148,51 @@ exports.updateStaffLocation = async (req, res, next) => {
     return res.status(500).json({ success: false, message: 'Server error while updating staff location.' });
   }
 };
+
+exports.cancelInvitation = async (req, res, next) => {
+  try {
+    const ownerId = req.user._id;
+    const { userId } = req.params;
+
+    if (!userId) {
+      const error = new Error('User ID is required.');
+      error.status = 400;
+      throw error;
+    }
+
+    const result = await staffService.cancelInvitation(ownerId, userId);
+    return res.status(200).json({
+      message: 'Invitation canceled successfully.',
+      result
+    });
+  } catch (error) {
+    if (error.status) {
+      return res.status(error.status).json({ message: error.message });
+    }
+    return res.status(500).json({ message: 'Server error while canceling invitation.' });
+  }
+};
+
+exports.fireStaff = async (req, res, next) => {
+  try {
+    const ownerId = req.user._id;
+    const { userId } = req.params;
+
+    if (!userId) {
+      const error = new Error('User ID is required.');
+      error.status = 400;
+      throw error;
+    }
+
+    const result = await staffService.fireStaff(ownerId, userId);
+    return res.status(200).json({
+      message: 'Staff member fired successfully.',
+      result
+    });
+  } catch (error) {
+    if (error.status) {
+      return res.status(error.status).json({ message: error.message });
+    }
+    return res.status(500).json({ message: 'Server error while firing staff member.' });
+  }
+};

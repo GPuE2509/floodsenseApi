@@ -46,28 +46,36 @@ exports.inviteStaff = async (ownerId, { phone_or_email }) => {
     user_id: userToInvite._id
   });
 
+  let newStaff;
+
   if (existingLink) {
     if (existingLink.status === 'Pending_Invite') {
       const error = new Error('User has already been invited.');
       error.status = 400;
       throw error;
-    } else {
+    } else if (['Available', 'Busy', 'Suspended'].includes(existingLink.status)) {
       const error = new Error('User is already a staff member in this workshop.');
       error.status = 400;
       throw error;
+    } else {
+      // Status is 'Rejected' or 'Inactive', allow re-invite
+      existingLink.status = 'Pending_Invite';
+      existingLink.invited_at = new Date();
+      existingLink.joined_at = undefined;
+      await existingLink.save();
+      newStaff = existingLink;
     }
+  } else {
+    // Create WorkshopStaff record as Pending_Invite
+    newStaff = new WorkshopStaff({
+      workshop_id: workshop._id,
+      user_id: userToInvite._id,
+      workshop_name: workshop.name,
+      is_owner: false,
+      status: 'Pending_Invite'
+    });
+    await newStaff.save();
   }
-
-  // Create WorkshopStaff record as Pending_Invite
-  const newStaff = new WorkshopStaff({
-    workshop_id: workshop._id,
-    user_id: userToInvite._id,
-    workshop_name: workshop.name,
-    is_owner: false,
-    status: 'Pending_Invite'
-  });
-
-  await newStaff.save();
 
   // Notify the user
   try {
@@ -181,9 +189,12 @@ exports.getWorkshopStaff = async (userId) => {
     workshop_id: userStaffLink.workshop_id
   }).populate('user_id', 'full_name phone avatar_url email').lean();
 
+  // Filter out staff records with null user_id
+  const validStaff = staff.filter(s => s.user_id != null);
+
   const onDutyStaffUserIds = await getCurrentOnDutyUserIds(userStaffLink.workshop_id);
 
-  const mappedStaff = await Promise.all(staff.map(async (s) => {
+  const mappedStaff = await Promise.all(validStaff.map(async (s) => {
     const uidStr = s.user_id?._id?.toString() || s.user_id?.toString();
     const tasksCount = await RescueSession.countDocuments({ assigned_staff_id: s._id });
     return {
@@ -391,4 +402,112 @@ exports.updateStaffLocation = async (userId, lat, lng) => {
   staff.current_lng = lng;
   await staff.save();
   return staff;
+};
+
+exports.cancelInvitation = async (ownerId, targetUserId) => {
+  // Find the owner's workshop
+  const ownerStaffLink = await WorkshopStaff.findOne({ user_id: ownerId, is_owner: true });
+  if (!ownerStaffLink) {
+    const error = new Error('You do not own a workshop.');
+    error.status = 403;
+    throw error;
+  }
+
+  // Find and delete the pending invite link
+  const staffLink = await WorkshopStaff.findOneAndDelete({
+    workshop_id: ownerStaffLink.workshop_id,
+    user_id: targetUserId,
+    status: 'Pending_Invite',
+    is_owner: false
+  });
+
+  if (!staffLink) {
+    const error = new Error('Pending invitation not found.');
+    error.status = 404;
+    throw error;
+  }
+
+  // Delete the notification related to this invite
+  try {
+    await Notification.deleteMany({
+      recipient_id: targetUserId,
+      type: 'Workshop_Invite',
+      reference_id: staffLink._id
+    });
+  } catch (err) {
+    console.error('Failed to delete invitation notification:', err);
+  }
+
+  return { message: 'Invitation canceled successfully.' };
+};
+
+exports.fireStaff = async (ownerId, targetUserId) => {
+  // Find the owner's workshop
+  const ownerStaffLink = await WorkshopStaff.findOne({ user_id: ownerId, is_owner: true });
+  if (!ownerStaffLink) {
+    const error = new Error('You do not own a workshop.');
+    error.status = 403;
+    throw error;
+  }
+
+  // Find the staff record to delete
+  const staffLink = await WorkshopStaff.findOne({
+    workshop_id: ownerStaffLink.workshop_id,
+    user_id: targetUserId,
+    is_owner: false
+  });
+
+  if (!staffLink) {
+    const error = new Error('Staff member not found in your workshop.');
+    error.status = 404;
+    throw error;
+  }
+
+  // Delete the record
+  await WorkshopStaff.deleteOne({ _id: staffLink._id });
+
+  // Clean up future shift assignments
+  try {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    const todayStr = `${yyyy}-${mm}-${dd}`;
+
+    await ShiftAssignment.deleteMany({
+      workshopId: ownerStaffLink.workshop_id,
+      staffId: targetUserId,
+      date: { $gte: todayStr }
+    });
+  } catch (err) {
+    console.error('Failed to clean up fired staff shift assignments:', err);
+  }
+
+  // Revoke Workshop role if they don't belong to any other active workshop
+  const otherActiveCount = await WorkshopStaff.countDocuments({
+    user_id: targetUserId,
+    status: { $in: ['Available', 'Busy', 'Suspended'] }
+  });
+
+  if (otherActiveCount === 0) {
+    await User.findByIdAndUpdate(targetUserId, { role: 'User' });
+  }
+
+  // Notify the user they have been fired/removed
+  try {
+    const workshop = await Workshop.findById(ownerStaffLink.workshop_id);
+    await Notification.create({
+      recipient_id: targetUserId,
+      title: 'Removed from Workshop',
+      body: `You have been removed from the staff list of "${workshop.name}".`,
+      type: 'System_Alert',
+      metadata: {
+        web_url: '/'
+      }
+    });
+  } catch (err) {
+    console.error('Failed to create fired staff notification:', err);
+  }
+
+  return { message: 'Staff member fired successfully.' };
 };
