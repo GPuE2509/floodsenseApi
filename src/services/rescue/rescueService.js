@@ -259,7 +259,10 @@ exports.createRescueRequest = async (sessionData, requesterUser) => {
 
   // 3. Filter nearby volunteers and notify them
   for (const volunteer of activeVolunteers) {
-    if (volunteer.user_id && volunteer.user_id._id.toString() === requesterUser._id.toString()) {
+    if (!volunteer.user_id) {
+      continue;
+    }
+    if (volunteer.user_id._id.toString() === requesterUser._id.toString()) {
       continue;
     }
     if (volunteer.current_lat != null && volunteer.current_lng != null) {
@@ -330,7 +333,7 @@ exports.getActiveRescueRequestsForVolunteer = async (volunteerUserId, options = 
 
   const query = {
     $or: [
-      { status: 'Pending', requester_id: { $ne: volunteerUserId } }
+      { status: 'Pending', requester_id: { $ne: volunteerUserId }, workshop_id: null }
     ]
   };
 
